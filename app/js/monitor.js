@@ -1,10 +1,19 @@
+const { ipcRenderer } = require("electron");
 const path = require("path");
 const osu = require("node-os-utils");
 const cpu = osu.cpu;
 const mem = osu.mem;
 const os = osu.os;
 
-let cpuOverload = 30;
+let cpuOverload;
+let alertFrequency;
+
+// Get Settings and values
+ipcRenderer.on("settings:get", (e, settings) => {
+  // converts any string type to numbers by using '+' sign
+  cpuOverload = +settings.cpuOverload;
+  alertFrequency = +settings.alertFrequency;
+});
 
 // Run every 2 seconds
 setInterval(() => {
@@ -18,6 +27,17 @@ setInterval(() => {
       document.getElementById("cpu-progress").style.background = "red";
     } else {
       document.getElementById("cpu-progress").style.background = "#30c88b";
+    }
+
+    // Check overload
+    if (info >= cpuOverload && runNotify(alertFrequency)) {
+      notifyUser({
+        title: "CPU Overload",
+        body: `CPU is over ${cpuOverload}%`,
+        icon: path.join(__dirname, "img", "icon.png"),
+      });
+
+      localStorage.setItem("lastNotify", +new Date());
     }
   });
 
@@ -53,4 +73,28 @@ function convertToDhms(seconds) {
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
   return `${d}d, ${h}h, ${m}m, ${s}s`;
+}
+
+// Send notifications
+function notifyUser(options) {
+  new Notification(options.title, options);
+}
+
+// Check how much time has passed since notification
+function runNotify(frequency) {
+  if (localStorage.getItem("lastNotify") === null) {
+    // Store time-stamp
+    localStorage.setItem("lastNotify", +new Date());
+    return true;
+  }
+  const notifyTime = new Date(parseInt(localStorage.getItem("lastNotify")));
+  const now = new Date();
+  const difftime = Math.abs(now - notifyTime);
+  const minPassed = Math.ceil(difftime / (1000 * 60));
+
+  if (minPassed > frequency) {
+    return true;
+  } else {
+    return false;
+  }
 }
