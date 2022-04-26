@@ -8,6 +8,9 @@ class MainWindow extends BrowserWindow {
       height: 500,
       icon: "./assets/icons/icon.png",
       resizable: isDev ? true : false,
+
+      // below code refers to on opening
+      // the application his the mainwindow
       show: false,
       opacity: 0.9,
       webPreferences: {
